@@ -12,15 +12,15 @@ from ambianic.pipeline.ai.tf_detect import TFDetectionModel
 log = logging.getLogger(__name__)
 
 
-class TFBoundingBoxDetection(PipeElement):
+class TFBoundingBoxDetection(TFDetectionModel):
     """Applies Tensorflow image detection."""
 
     def __init__(self,
                  model=None,
-                 labels=None,
-                 label_filter=None,
-                 confidence_threshold=0.6,
-                 top_k=3,
+                #  labels=None,
+                #  label_filter=None,
+                #  confidence_threshold=0.6,
+                #  top_k=3,
                  **kwargs
                  ):
         """Initialize detector with config parameters.
@@ -34,52 +34,53 @@ class TFBoundingBoxDetection(PipeElement):
 
         """
         # log.warning('TFImageDetection __init__ invoked')
-        super().__init__(**kwargs)
 
-        self._tfengine = TFInferenceEngine(
-            model=model,
-            labels=labels,
-            confidence_threshold=confidence_threshold,
-            top_k=top_k)
-        self._labels = self.load_labels(self._tfengine.labels_path)
-        self._label_filter = label_filter
-        self.last_time = time.monotonic()
+        super().__init__(model, **kwargs)
 
-    def load_labels(self, label_path=None):
-        """Load label mapping from integer code to text.
+        # self._tfengine = TFInferenceEngine(
+        #     model=model,
+        #     labels=labels,
+        #     confidence_threshold=confidence_threshold,
+        #     top_k=top_k)
+        # self._labels = self.load_labels(self._tfengine.labels_path)
+        # self._label_filter = label_filter
+        # self.last_time = time.monotonic()
 
-        :Parameters:
-        ----------
-        label_path : string
-            Path to label mapping file.
+    # def load_labels(self, label_path=None):
+    #     """Load label mapping from integer code to text.
 
-        :Returns:
-        -------
-        dict
-            {label_code, label_text}
+    #     :Parameters:
+    #     ----------
+    #     label_path : string
+    #         Path to label mapping file.
 
-        """
-        assert label_path
-        p = re.compile(r'\s*(\d+)(.+)')
-        with open(label_path, 'r', encoding='utf-8') as f:
-            lines = (p.match(line).groups() for line in f.readlines())
-            return {int(num): text.strip() for num, text in lines}
+    #     :Returns:
+    #     -------
+    #     dict
+    #         {label_code, label_text}
+
+    #     """
+    #     assert label_path
+    #     p = re.compile(r'\s*(\d+)(.+)')
+    #     with open(label_path, 'r', encoding='utf-8') as f:
+    #         lines = (p.match(line).groups() for line in f.readlines())
+    #         return {int(num): text.strip() for num, text in lines}
 
 
-    def log_stats(self, start_time=None):
-        assert start_time
-        log.debug("TF engine returned inference results")
-        end_time = time.monotonic()
-        inf_time = (end_time - start_time) * 1000
-        fps = 1.0/(end_time - self.last_time)
-        if self.context and self.context.unique_pipeline_name:
-            pipeline_name = self.context.unique_pipeline_name
-        else:
-            pipeline_name = 'unknown'
-        inference_type = type(self).__name__
-        inf_info = '%s inference time %.2f ms, %.2f fps in pipeline %s'
-        log.info(inf_info, inference_type, inf_time, fps, pipeline_name)
-        self.last_time = end_time
+    # def log_stats(self, start_time=None):
+    #     assert start_time
+    #     log.debug("TF engine returned inference results")
+    #     end_time = time.monotonic()
+    #     inf_time = (end_time - start_time) * 1000
+    #     fps = 1.0/(end_time - self.last_time)
+    #     if self.context and self.context.unique_pipeline_name:
+    #         pipeline_name = self.context.unique_pipeline_name
+    #     else:
+    #         pipeline_name = 'unknown'
+    #     inference_type = type(self).__name__
+    #     inf_info = '%s inference time %.2f ms, %.2f fps in pipeline %s'
+    #     log.info(inf_info, inference_type, inf_time, fps, pipeline_name)
+    #     self.last_time = end_time
 
     def detect(self, image=None):
         """Detect objects in image.
@@ -110,11 +111,11 @@ class TFBoundingBoxDetection(PipeElement):
 
         desired_size = (width, height)
         # thumbnail is a proportionately resized image
-        thumbnail = TFDetectionModel.thumbnail(image=image, desired_size=desired_size)
+        thumbnail = self.thumbnail(image=image, desired_size=desired_size)
         # convert thumbnail into an image with the exact size
         # as the input tensor
         # preserving proportions by padding as needed
-        new_im = TFDetectionModel.resize(image=thumbnail, desired_size=desired_size)
+        new_im = self.resize(image=thumbnail, desired_size=desired_size)
 
         # calculate what fraction of the new image is the thumbnail size
         # we will use these factors to adjust detection box coordinates
